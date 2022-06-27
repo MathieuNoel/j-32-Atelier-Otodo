@@ -1,3 +1,5 @@
+
+
 const taskManager = {
     apiEndpoint: 'http://localhost:3000',
 
@@ -9,10 +11,21 @@ const taskManager = {
 
 
         // Récupère la liste des tâches à l'aide de la fonction fetch()
+        try {
+            
+            const response = await fetch(`${taskManager.apiEndpoint}/tasks`)
+            const tasks = await response.json()
+            // Boucle sur la liste des tâches
+           for(const task of tasks) {
+               // pour chaque tâche appeler la fonction insertTaskInHtml()
+               taskManager.insertTaskInHtml(task)
+           }
+        } catch (error) {
+            console.error(error);
+            alert('Impossible de récupérer les tâches !');
+        }
 
-        // Boucle sur la liste des tâches
 
-        // pour chaque tâche appeler la fonction insertTaskInHtml()
 
     },
 
@@ -31,6 +44,7 @@ const taskManager = {
      */
     insertTaskInHtml: function (taskData) {
 
+        
         // On récupère le HTML d'une tâche dans le template
         const taskTemplate = document.querySelector('.template-task');
         const newTask = document.importNode(taskTemplate.content, true);
@@ -61,17 +75,30 @@ const taskManager = {
      * 
      * @param {Event} event 
      */
-    handleCreateForm: function (event) {
+    handleCreateForm: async function (event) {
         // Bloquer l'envoie du formulaire
         event.preventDefault();
 
         // Récupérer les données du formulaire
         const taskFormData = new FormData(event.currentTarget);
+        
+        try {
+            // Envoyer les données à l'API
+            const response = await fetch(`${taskManager.apiEndpoint}/tasks`,{
+                method: 'POST',
+                body : taskFormData
+            })
+            // Après confirmation de l'API insérer la tâche dans la page (il y a une fonction toute prete pour ça ;) 
+            const newTask = await response.json()
+            console.log(newTask);
+            if(!response.ok) throw newTask ;
+            // en utilisant la valeur de retour de l'API
+            taskManager.insertTaskInHtml(newTask)
+        } catch (error) {
+            console.error(error);
+            alert('Impossible de créer la tâches !');
+        }
 
-        // Envoyer les données à l'API
-
-        // Après confirmation de l'API insérer la tâche dans la page (il y a une fonction toute prete pour ça ;) 
-        // en utilisant la valeur de retour de l'API
 
     },
 
@@ -80,15 +107,26 @@ const taskManager = {
      * 
      * @param {Event} event 
      */
-    handleDeleteButton: function (event) {
-
+    handleDeleteButton: async function (event) {
+        event.preventDefault()
+        if(!confirm('Voulez-vous vraiment supprimer cette tâche ?')) return;
         // On récupère l'ID de l'élément à supprimer
         const taskHtmlElement = event.currentTarget.closest('.task');
         const taskId = taskHtmlElement.dataset.id;
 
         // On envoie la requete de suppression à l'API
-
-        // On supprime l'élément dans la page HTML
+        try {
+            const response = await fetch(`${taskManager.apiEndpoint}/tasks/${taskId}`, {
+              method: 'DELETE'
+            });
+            
+            if(!response.ok) throw newTask        
+            // On supprime l'élément dans la page HTML            
+            if(response.ok) {taskHtmlElement.remove(),alert("La tâche a bien été supprimée")} 
+          } catch(error) {
+            alert('Impossible de supprimer la liste !');
+            console.error(error);
+          }
 
     },
 
@@ -111,13 +149,14 @@ const taskManager = {
      * 
      * @param {Event} event 
      */
-    handleEditForm: function (event) {
+    handleEditForm: async function (event) {
         // Bloquer l'envoie du formulaire
         event.preventDefault();
 
         // On récupère l'élément HTML complet de la tâche à modifier
         const taskHtmlElement = event.currentTarget.closest('.task');
-
+        const taskName = taskHtmlElement.querySelector('.task__name');
+        // console.log(taskHtmlElement, taskName );
         // Récupérer les données du formulaire
         const taskFormData = new FormData(event.currentTarget);
 
@@ -125,9 +164,26 @@ const taskManager = {
         const taskId = taskFormData.get('id');
 
         // Envoyer les données à l'API
-
-
-        // Après confirmation de l'API modifier le nom de la tâche dans le span.task__name
+        try {
+            const response = await fetch(`${taskManager.apiEndpoint}/tasks/${taskId}`, {
+                method: 'PUT',
+                body: taskFormData
+              });
+              const newTask = await response.json()
+              // Après confirmation de l'API modifier le nom de la tâche dans le span.task__name
+              if(response.ok) {
+                taskName.textContent = newTask.name;
+                
+                // On masque l'input de modification
+                taskHtmlElement.querySelector('.task__edit-form').style.display.remove = 'none';
+                // On affiche le nouveau titre
+                taskHtmlElement.querySelector('.task__name').style.display.remove = 'block';
+            }
+              
+        } catch (error) {
+            alert('Impossible de modifier la tâche !');
+            console.error(error);
+        }
 
         // On affiche l'input de modification
         taskHtmlElement.querySelector('.task__edit-form').style.display = 'none';
